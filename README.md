@@ -45,7 +45,8 @@ The Surgical Resolution: In the DNS Manager server properties, interface listeni
 
 Development of a PowerShell script (ins-choco.ps1) to inject the package manager and silently download critical tools (Chrome, AnyDesk, Greenshot, etc.).
 
-Exception Handling: Resolution of Installation Error 1603 (conflict with older Chrome versions) by forcing registry cleanups and deleting orphaned directories via CLI (choco uninstall googlechrome -y).
+Exception Handling: Resolution of Installation Error 1603 (conflict with older Chrome versions) by forcing registry cleanups and deleting orphaned directories via CLI (Remove-item -recurse -force "c:\program files\google\chrome";
+choco install Googlechrome -y --force --ignore-checksums).
 
 <img width="1014" height="743" alt="Captura de ecrã 2026-03-18 005930" src="https://github.com/user-attachments/assets/a338a195-a51c-4804-9ce2-7aec2e0a54ae" />
 <img width="1015" height="748" alt="Captura de ecrã 2026-03-18 005958" src="https://github.com/user-attachments/assets/212210cd-9792-42a5-ad24-bc613cbfb456" />
