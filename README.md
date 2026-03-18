@@ -114,8 +114,10 @@ Label as: Dados Administrativos CF Empresa
 
 Drive Letter: Z
 
-5. Client-Side Update:
+6.3.5 Client-Side Update:
 Finally, on Zé Manel's PC, the system pulled the new policy (either via a reboot, login, or gpupdate /force). The Z: drive successfully appeared in "This PC" with the exact label and path you defined.
+
+# Thank you for your time =) 
 
 
 # Em Português
@@ -171,3 +173,57 @@ Mapeamento dinâmico de unidades de rede (Disco Z: para "Partilha da Empresa").
 Aplicação de UI corporativa (Wallpaper) e bloqueio de funções sensíveis (Painel de Controlo) ao utilizador final.
 
 Implementação de atalho direto no Ambiente de Trabalho integrado com a plataforma de ticketing na Cloud (Jira).
+
+# 6º Resolução de Problemas Avançada (Troubleshooting):
+
+# 6.1 Falha de Kerberos por Dessincronização de Tempo e Erro de GPO:
+O Incidente: As atualizações de Políticas de Grupo (gpupdate /force) falharam completamente no PC cliente (Zé Manel), impedindo a aplicação do wallpaper corporativo e dos scripts de software.
+
+A Causa Raiz: Foi identificada uma discrepância de tempo significativa entre o Controlador de Domínio e a VM cliente. O Active Directory depende fortemente do protocolo de autenticação Kerberos, que impõe uma tolerância rigorosa de dessincronização de tempo (por defeito, 5 minutos) para evitar ataques de repetição (replay attacks). A dessincronização quebrou a relação de confiança segura, negando ao PC o acesso à pasta SYSVOL.
+
+A Resolução: Foi forçada uma sincronização de tempo na máquina cliente para alinhar estritamente com o Controlador de Domínio (net time \\10.0.2.10 /set /y). Assim que os relógios ficaram perfeitamente sincronizados, a concessão de tickets Kerberos foi restaurada e o comando gpupdate /force foi executado com sucesso.
+
+# 6.2 Aplicação de Definições de Localização (Idioma) em Ambientes Restritos:
+O Incidente: O posto de trabalho cliente (PC do Zé Manel) assumiu por defeito o layout de teclado dos EUA (en-US), causando problemas de mapeamento de caracteres para teclados físicos em Português (PT).
+
+A Complicação: O utilizador final não conseguia alterar o layout do teclado manualmente porque uma GPO de segurança rigorosa ("Bloquear Painel de Controlo") já estava aplicada na sua Unidade Organizacional (OU), retirando-lhe o acesso às Definições do Windows.
+
+A Resolução: Em vez de enfraquecer a postura de segurança levantando temporariamente a restrição do Painel de Controlo, foi adotada uma abordagem administrativa centralizada. Foi criado um novo Objeto de Política de Grupo (GPO) chamado Forçar Teclado PT e associado à OU Malucos Do IT. Esta política forçou automaticamente o método de introdução pt-PT para o utilizador no momento do login, resolvendo o problema de localização globalmente sem quebrar o princípio do menor privilégio (principle of least privilege).
+
+# 6.3 Resolução de Caminhos UNC e Mapeamento de Partilhas SMB:
+O Incidente: O mapeamento da unidade de rede (Disco Z:) via Preferências de Política de Grupo (GPP) falhou inicialmente ao tentar usar o nome do domínio no caminho UNC (ex: \\helpdesk.local\Partilha Da Empresa CF).
+
+A Causa Raiz: As partilhas de ficheiros SMB padrão estão vinculadas ao servidor anfitrião específico. Embora o Active Directory resolva automaticamente caminhos baseados no domínio para pastas integradas como \SYSVOL ou \NETLOGON, as pastas partilhadas personalizadas requerem Namespaces do Sistema de Ficheiros Distribuído (DFS) para serem acedidas através da raiz do domínio. Sem o DFS configurado, é exigido o nome de anfitrião (hostname) explícito ou o IP do servidor de ficheiros.
+
+A Resolução: A GPO de Mapeamento de Unidades (Drive Maps) foi reconfigurada para usar o caminho UNC Direto correto, apontando para o hostname específico do Controlador de Domínio (\\DC1\Partilha Da Empresa CF). A unidade foi mapeada com sucesso na seguinte atualização de políticas.
+
+6.3.1 Como foi resolvido:
+Aceder ao Editor de Políticas de Grupo:
+A consola de Gestão de Políticas de Grupo (Group Policy Management) foi aberta no servidor e foi editada a GPO responsável pelas unidades da empresa (associada à OU Malucos Do IT).
+
+6.3.2 Navegar até ao Mapeamento de Unidades:
+Dentro do Editor de Gestão de Políticas de Grupo, a navegação seguiu até ao caminho exato de configuração para as preferências do utilizador:
+User Configuration > Preferences > Windows Settings > Drive Maps
+
+6.3.3 Corrigir o Caminho UNC (A Correção):
+Foram abertas as propriedades do mapeamento da unidade Z: e foi feita a alteração crucial no campo Location (Localização):
+
+Removido o caminho errado: \\helpdesk.local\Partilha Da Empresa CF
+
+Inserido o caminho explícito correto: \\DC1\Partilha Da Empresa CF (apontando diretamente para o hostname do Controlador de Domínio onde a pasta está fisicamente alojada).
+
+6.3.4 Configurar a Experiência do Utilizador:
+Nessa mesma janela, garantiu-se que a ligação seria persistente e amigável para o utilizador, configurando:
+
+Action (Ação): Create (Criar)
+
+Reconnect (Voltar a ligar): Marcado (para que sobreviva aos reinícios)
+
+Label as (Etiqueta): Dados Administrativos CF Empresa
+
+Drive Letter (Letra da Unidade): Z
+
+6.3.5 Atualização do Lado do Cliente:
+Por fim, no PC do Zé Manel, o sistema obteve a nova política (através de um reinício, novo login ou gpupdate /force). O disco Z: apareceu com sucesso em "Este PC" (This PC) com a etiqueta e o caminho exatos que foram definidos.
+
+# Obrigado Pelo o seu tempo
