@@ -12,7 +12,6 @@ $apps = @(
     "windirstat",      # Diagnóstico de disco
     "advanced-ip-scanner", # Mapear a rede
     "vlc",             # Ver vídeos de erros
-    "espresso"         # Manter PC acordado
 )
 
 foreach ($app in $apps) {
