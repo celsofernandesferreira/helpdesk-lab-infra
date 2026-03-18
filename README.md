@@ -64,6 +64,58 @@ Implementation of a direct Desktop shortcut integrated with the Cloud ticketing 
 <img width="1861" height="837" alt="Captura de ecrã 2026-03-18 004601" src="https://github.com/user-attachments/assets/4f1a1776-22c5-4523-b58c-163365ca06e9" />
 
 
+# 6. Advanced Troubleshooting: 
+ # 6.1 Kerberos Time Skew & GPO Failure:
+
+The Incident: Group Policy updates (gpupdate /force) failed completely on the client PC (Zé Manel), preventing the corporate wallpaper and software scripts from deploying.
+
+The Root Cause: A significant time discrepancy was identified between the Domain Controller and the client VM. Active Directory relies heavily on the Kerberos authentication protocol, which enforces a strict maximum time skew tolerance (default 5 minutes) to prevent replay attacks. The desynchronization broke the secure trust relationship, denying the PC access to the SYSVOL folder.
+
+The Resolution: Forced a time synchronization on the client machine to strictly align with the Domain Controller (net time \\10.0.2.10 /set /y). Once the clocks were perfectly synced, Kerberos ticket-granting was restored, and gpupdate /force executed successfully.
+
+# 6.2 Enforcing Localization Settings Under Restricted Environments:
+
+The Incident: The client endpoint (Zé Manel's PC) defaulted to a US keyboard layout (en-US), causing character mapping issues for physical Portuguese (PT) keyboards.
+
+The Complication: The end-user was unable to change the keyboard layout manually because a strict security GPO ("Bloquear Painel de Controlo" / Block Control Panel) was already enforced on their Organizational Unit (OU), stripping away their access to the Windows Settings.
+
+The Resolution: Instead of weakening the security posture by temporarily lifting the Control Panel restriction, a centralized administrative approach was taken. A new Group Policy Object named Forçar Teclado PT was created and linked to the Malucos Do IT OU. This policy automatically forced the pt-PT input method for the user upon login, resolving the localization issue globally without breaking the principle of least privilege.
+
+# 6.3 UNC Path Resolution and SMB Share Mapping:
+The Incident: Network drive mapping (Drive Z:) via Group Policy Preferences initially failed when attempting to use the domain name in the UNC path (e.g., \\helpdesk.local\Partilha Da Empresa CF).
+
+The Root Cause: Standard SMB file shares are bound to the specific host server. While Active Directory automatically resolves domain-based paths for built-in folders like \SYSVOL or \NETLOGON, custom shared folders require Distributed File System (DFS) Namespaces to be accessed via the domain root. Without DFS configured, the explicit hostname or IP of the file server is required.
+
+The Resolution: Reconfigured the Drive Maps GPO to use the correct Direct UNC path pointing to the specific Domain Controller's hostname (\\DC1\Partilha Da Empresa CF). The drive mapped successfully upon the next policy refresh.
+
+ 6.3.1 How it was fixed:
+ Accessing the Group Policy Editor:
+You opened the Group Policy Management console on your server and edited the GPO responsible for the company drives (linked to the Malucos Do IT OU).
+
+6.3.2 Navigating to Drive Maps:
+Inside the Group Policy Management Editor, you drilled down to the exact configuration path for user preferences:
+User Configuration > Preferences > Windows Settings > Drive Maps
+
+6.3.3 Correcting the UNC Path (The Fix):
+You opened the properties for the Z: drive mapping and made the crucial change in the Location field:
+
+Removed the wrong path: \\helpdesk.local\Partilha Da Empresa CF
+
+Entered the correct explicit path: \\DC1\Partilha Da Empresa CF (pointing directly to the Domain Controller's hostname where the folder is physically hosted).
+
+6.3.4 Setting the User Experience:
+In that same window, you ensured the connection was persistent and user-friendly by configuring:
+
+Action: Create 
+
+Reconnect: Checked (so it survives reboots)
+
+Label as: Dados Administrativos CF Empresa
+
+Drive Letter: Z
+
+5. Client-Side Update:
+Finally, on Zé Manel's PC, the system pulled the new policy (either via a reboot, login, or gpupdate /force). The Z: drive successfully appeared in "This PC" with the exact label and path you defined.
 
 
 # Em Português
@@ -94,7 +146,7 @@ Criação do domínio helpdesk.local.
 Estruturação de OUs (Organizational Units) para separação lógica de computadores e utilizadores técnicos (ex: zemanel).
 
 
-# 2º Engenharia de Rede e Segurança (RRAS & NAT):
+#2 Engenharia de Rede e Segurança (RRAS & NAT):
 
 Configuração do Servidor (DC1) como Gateway da rede.
 
